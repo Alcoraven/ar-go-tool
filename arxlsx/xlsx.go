@@ -3,6 +3,7 @@ package arxlsx
 import (
 	"fmt"
 	"github.com/tealeg/xlsx"
+	"runtime/debug"
 )
 
 type row struct {
@@ -66,12 +67,18 @@ func (xf *file) AddSheet(s Sheet) {
 }
 
 func (xf *file) Export() error {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Println("recovered from panic:", e)
+			fmt.Println(string(debug.Stack()))
+		}
+	}()
 	xlsxFile := xlsx.NewFile()
 
 	for _, s := range xf.sheets {
 		newSheet, e := xlsxFile.AddSheet(s.getSheetName())
 		if e != nil {
-			return e
+			panic(e)
 		}
 
 		var cell *xlsx.Cell
@@ -86,11 +93,19 @@ func (xf *file) Export() error {
 				case int32:
 					cell.SetInt64(int64(value.(int32)))
 				case int64:
-					cell.SetInt64(value.(int64))
+					if v := value.(int64); v > 999999999999999 {
+						cell.SetString(fmt.Sprintf("%v", value))
+					} else {
+						cell.SetInt64(value.(int64))
+					}
 				case uint32:
-					cell.SetValue(value.(uint32))
+					cell.SetInt64(int64(value.(uint32)))
 				case uint64:
-					cell.SetValue(value.(uint64))
+					if v := value.(uint64); v > 999999999999999 {
+						cell.SetString(fmt.Sprintf("%v", value))
+					} else {
+						cell.SetInt64(int64(value.(uint64)))
+					}
 				case float64:
 					cell.SetFloat(value.(float64))
 				case string:
@@ -112,7 +127,7 @@ func (xf *file) Export() error {
 	}
 
 	if err := xlsxFile.Save(xf.filePath); err != nil {
-		return err
+		panic(err)
 	}
 
 	return nil

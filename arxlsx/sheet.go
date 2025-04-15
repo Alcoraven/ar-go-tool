@@ -7,11 +7,12 @@ type sheet struct {
 }
 
 func newSheet(name string) *sheet {
-	return &sheet{
+	var s = &sheet{
 		name:    name,
 		titles:  make([]string, 0),
 		rowList: make([]Row, 0),
 	}
+	return s
 }
 
 type Sheet interface {
@@ -19,6 +20,7 @@ type Sheet interface {
 	AddRowWithValues(...interface{}) // add a new row for sheet with values
 	CreateRow() Row                  // create a new row for sheet and return it
 	GetSheetName() string            // return sheet.name of the sheet
+	SetTitles([]string)              // set sheet.titles
 	GetTitles() []string             // return sheet.titles of the sheet
 	GetRows() []Row                  // return sheet.rowList of the sheet
 }
@@ -28,23 +30,22 @@ func (s *sheet) AddRow(r Row) {
 }
 
 func (s *sheet) AddRowWithValues(values ...interface{}) {
-	if len(values) == 0 {
-		return
-	}
-	r := new(row)
-	for _, v := range values {
-		r.AddValue(v)
-	}
+	r := newRow(values...)
 	s.AddRow(r)
 }
 
 func (s *sheet) CreateRow() Row {
-	r := new(row)
+	r := newRow()
+	s.AddRow(r)
 	return r
 }
 
 func (s *sheet) GetSheetName() string {
 	return s.name
+}
+
+func (s *sheet) SetTitles(titles []string) {
+	s.titles = titles
 }
 
 func (s *sheet) GetTitles() []string {

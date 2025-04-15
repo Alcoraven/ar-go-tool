@@ -59,12 +59,10 @@ func (xf *file) Export() error {
 			panic(e)
 		}
 
-		var cell *xlsx.Cell
-		var cellRow *xlsx.Cell
 		for _, r := range s.GetRows() {
 			nr := ns.AddRow()
 			for _, value := range r.GetValues() {
-				cell = nr.AddCell()
+				cell := nr.AddCell()
 				switch value.(type) {
 				case int:
 					cell.SetInt(value.(int))
@@ -100,8 +98,8 @@ func (xf *file) Export() error {
 		if titles := s.GetTitles(); len(titles) > 0 {
 			rowTitle, _ := ns.AddRowAtIndex(0)
 			for _, title := range titles {
-				cellRow = rowTitle.AddCell()
-				cellRow.Value = title
+				cell := rowTitle.AddCell()
+				cell.Value = title
 			}
 		}
 	}

@@ -9,26 +9,6 @@ import (
 	"time"
 )
 
-// type LogSwitchPlan uint32
-//
-// const (
-// 	LogPlanOneFile LogSwitchPlan = iota
-// 	LogPlanDayChange
-// )
-//
-// type FileSwitchConfig struct {
-// 	SwitchPlan     uint32
-// 	RotateWithSize uint64 // auto rotate log file if FileSize(Bytes) > RotateWithSize(Bytes)
-//
-// }
-//
-// func isLogPlan(lp uint32) bool {
-// 	if artool.InSlice([]uint32{}, lp) {
-// 		return true
-// 	}
-// 	return false
-// }
-
 type manager struct {
 	sync.RWMutex
 	mode     LogMode

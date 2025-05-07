@@ -55,10 +55,10 @@ func getPrefix(timeLoc *time.Location, depth int, level LogLevel) string {
 
 func formatMsg(list ...interface{}) (msg string) {
 	for i, v := range list {
-		if i > 0 {
-			// msg += " "
-		}
 		msg += formatWord(v)
+		if i != len(list)-1 {
+			msg += " "
+		}
 	}
 
 	return

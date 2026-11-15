@@ -65,7 +65,7 @@ func md5Str(str string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// SetInstanceId 设置包内实例 ID，仅首次调用生效，后续调用静默忽略。
+// SetInstanceId 设置包内实例 ID，仅在尚未设置且尚未生成 ID 时生效，否则静默忽略。
 // 应在程序启动、开始生成 ID 前调用；调用方需保证 id 在 0~99 范围内，且不同实例不重复。
 // 未设置时默认为 0；显式设置为 0 也会消耗唯一的设置机会。
 func SetInstanceId(id uint64) {
@@ -85,9 +85,10 @@ func SetInstanceID(id uint64) {
 
 // GetUniqueTraceId 生成追踪 ID；同一毫秒内序列号耗尽时会等待时间前进。
 // 格式为 MD5(随机字符串+实例ID+时间戳+序列号)+实例ID+时间戳+序列号。
-// 实例 ID 使用 SetInstanceId 或 SetInstanceID 在启动时首次配置的值。
+// 首次设置或生成时锁定实例 ID；未设置就生成时锁定默认值 0，之后无法修改。
 func GetUniqueTraceId() string {
 	lock.Lock()
+	instanceIDSet = true
 	id := instanceID
 	lock.Unlock()
 	timestamp, sequence := getTimestampAndSequence()

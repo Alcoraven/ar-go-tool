@@ -2,11 +2,13 @@ package arlog
 
 import (
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 type manager struct {
@@ -21,51 +23,37 @@ type manager struct {
 	showPrefix bool
 }
 
-func (m *manager) createFile(f *arLogFs, savePath string) {
-	if _, err := os.Stat(savePath); err != nil {
-		switch {
-		case os.IsNotExist(err):
-			dir, _ := os.Getwd()
-			if e := os.MkdirAll(dir+"/"+savePath, os.ModePerm); e != nil {
-				fmt.Println("Save path not exist and created fail", savePath, err.Error())
-				panic(e)
-			}
-		case os.IsPermission(err):
-			fmt.Println("Permission denied", savePath, err.Error())
-			panic(err)
-		default:
-			fmt.Println("Unknown error", savePath, err.Error())
-			panic(err)
-		}
+func (m *manager) createFile(f *arLogFs, savePath string) error {
+	if err := os.MkdirAll(savePath, 0755); err != nil {
+		return err
 	}
-
+	var name, schedule string
 	switch m.plan {
 	case LogPlanOnce:
-		var filePath = savePath + "out.log"
-		f.openFile(filePath)
+		return f.openFile(filepath.Join(savePath, "out.log"))
 	case LogPlanDay:
-		nf := func() {
-			day := time.Now().In(m.timeLoc)
-			date := day.Format("20060102")
-			var filePath = savePath + date + ".log"
-			f.openFile(filePath)
-		}
-		nf()
-		c := cron.New(cron.WithLocation(m.timeLoc))
-		c.AddFunc("0 0 * * *", nf)
-		go c.Start()
+		name, schedule = "20060102", "0 0 * * *"
 	case LogPlanMonth:
-		nf := func() {
-			day := time.Now().In(m.timeLoc)
-			month := day.Format("200601")
-			var filePath = savePath + month + ".log"
-			f.openFile(filePath)
-		}
-		nf()
-		c := cron.New(cron.WithLocation(m.timeLoc))
-		c.AddFunc("0 0 1 * *", nf)
-		go c.Start()
+		name, schedule = "200601", "0 0 1 * *"
+	default:
+		return fmt.Errorf("unknown log plan: %d", m.plan)
 	}
+	open := func() error {
+		return f.openFile(filepath.Join(savePath, time.Now().In(m.timeLoc).Format(name)+".log"))
+	}
+	if err := open(); err != nil {
+		return err
+	}
+	c := cron.New(cron.WithLocation(m.timeLoc))
+	if _, err := c.AddFunc(schedule, func() {
+		if err := open(); err != nil {
+			fmt.Fprintln(os.Stderr, "open log file error:", err)
+		}
+	}); err != nil {
+		return err
+	}
+	c.Start()
+	return nil
 }
 
 func (m *manager) writeLog(level LogLevel, v ...interface{}) {
@@ -146,7 +134,9 @@ func Init(config *Config) (Log, error) {
 		f:          new(arLogFs),
 		showPrefix: showPrefix,
 	}
-	m.createFile(m.f, savePath)
+	if err := m.createFile(m.f, savePath); err != nil {
+		return nil, err
+	}
 
 	return m, nil
 }

@@ -1,4 +1,4 @@
-package tracer
+package artracer
 
 import (
 	"crypto/md5"
